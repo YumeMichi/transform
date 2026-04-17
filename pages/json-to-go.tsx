@@ -10,6 +10,21 @@ import gofmt from "gofmt.js";
 interface Settings {
   inline: boolean;
   customTag: string;
+  omitempty: boolean;
+}
+
+const defaultSettings: Settings = {
+  inline: true,
+  customTag: "",
+  omitempty: true
+};
+
+function normalizeSettings(value: Partial<Settings>): Settings {
+  return {
+    inline: value.inline !== false,
+    customTag: typeof value.customTag === "string" ? value.customTag : "",
+    omitempty: value.omitempty !== false
+  };
 }
 
 const formFields = [
@@ -22,22 +37,26 @@ const formFields = [
     type: InputType.TEXT_INPUT,
     key: "customTag",
     label: "Custom Extra Tag (e.g. msgpack)"
+  },
+  {
+    type: InputType.SWITCH,
+    key: "omitempty",
+    label: "Use omitempty (all fields)"
   }
 ];
 
 export default function JsonToGo() {
   const name = "JSON to Go Struct";
-  const [settings, setSettings] = useSettings(name, {
-    inline: true,
-    customTag: ""
-  });
+  const [rawSettings, setSettings] = useSettings(name, defaultSettings);
+  const settings = normalizeSettings(rawSettings || {});
 
   const transformer = useCallback(
     async ({ value }) => {
       return gofmt(
         jsonToGo(value, undefined, {
           inline: settings.inline,
-          customTag: settings.customTag
+          customTag: settings.customTag,
+          omitempty: settings.omitempty
         }).go
       );
     },
@@ -49,7 +68,7 @@ export default function JsonToGo() {
       return (
         <Form<Settings>
           title={name}
-          onSubmit={setSettings}
+          onSubmit={values => setSettings(normalizeSettings(values))}
           open={open}
           toggle={toggle}
           formsFields={formFields}
@@ -57,7 +76,7 @@ export default function JsonToGo() {
         />
       );
     },
-    []
+    [settings, setSettings]
   );
 
   return (
