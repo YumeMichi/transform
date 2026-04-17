@@ -5,9 +5,9 @@
   "author": "ritz078 <rkritesh078@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "dev:inspect": "NODE_OPTIONS=\"--inspect\" next dev",
-    "dev": "next dev",
-    "start": "next start",
+    "dev:inspect": "NODE_OPTIONS=\"--openssl-legacy-provider --inspect\" next dev",
+    "dev": "NODE_OPTIONS=\"--openssl-legacy-provider\" next dev",
+    "start": "NODE_OPTIONS=\"--openssl-legacy-provider\" next start",
     "format": "prettier --write '**/*.ts' '**/*.tsx'",
     "build": "NODE_OPTIONS=--openssl-legacy-provider next build",
     "now-build": "next build",
