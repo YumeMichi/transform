@@ -5,6 +5,7 @@ interface JsonToGoResult {
 
 interface JsonToGoOptions {
   inline?: boolean;
+  customTag?: string;
 }
 
 type OmitemptyMap = Record<string, boolean>;
@@ -15,9 +16,19 @@ export default function jsonToGo(
   options: JsonToGoOptions = {}
 ): JsonToGoResult {
   let data;
+  let customTag: string | undefined;
 
   try {
     data = JSON.parse(json.replace(/\.0/g, ".1"));
+  } catch (e) {
+    return {
+      go: "",
+      error: e.message
+    };
+  }
+
+  try {
+    customTag = parseCustomTag(options.customTag);
   } catch (e) {
     return {
       go: "",
@@ -29,16 +40,20 @@ export default function jsonToGo(
 
   if (options.inline === false) {
     return {
-      go: generateNonInlineTypes(data, rootType)
+      go: generateNonInlineTypes(data, rootType, customTag)
     };
   }
 
   return {
-    go: generateInlineTypes(data, rootType)
+    go: generateInlineTypes(data, rootType, customTag)
   };
 }
 
-function generateInlineTypes(scope: unknown, typename: string) {
+function generateInlineTypes(
+  scope: unknown,
+  typename: string,
+  customTag?: string
+) {
   let go = "";
   let tabs = 0;
 
@@ -115,11 +130,11 @@ function generateInlineTypes(scope: unknown, typename: string) {
       indent(tabs);
       append(format(keyname) + " ");
       parseScope(structScope[keyname]);
-      append(' `json:"' + keyname);
-      if (omitempty && omitempty[keyname] === true) {
-        append(",omitempty");
-      }
-      append('"`\n');
+      append(
+        " " +
+          buildStructTag(keyname, omitempty && omitempty[keyname], customTag)
+      );
+      append("\n");
     }
     indent(--tabs);
     append("}");
@@ -134,7 +149,11 @@ function generateInlineTypes(scope: unknown, typename: string) {
   }
 }
 
-function generateNonInlineTypes(scope: unknown, typename: string) {
+function generateNonInlineTypes(
+  scope: unknown,
+  typename: string,
+  customTag?: string
+) {
   const usedTypeNames = new Set<string>();
   const typeDefinitions: string[] = [];
 
@@ -192,10 +211,8 @@ function generateNonInlineTypes(scope: unknown, typename: string) {
         fieldName +
         " " +
         fieldType +
-        ' `json:"' +
-        keyname +
-        (omitempty && omitempty[keyname] ? ",omitempty" : "") +
-        '"`'
+        " " +
+        buildStructTag(keyname, omitempty && omitempty[keyname], customTag)
       );
     });
 
@@ -281,6 +298,34 @@ function generateNonInlineTypes(scope: unknown, typename: string) {
 
     return "[]" + (sliceType || "interface{}");
   }
+}
+
+function parseCustomTag(customTag?: string) {
+  const tag = (customTag || "").trim();
+  if (!tag) return undefined;
+
+  if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(tag)) {
+    throw new Error(
+      "Custom tag name must start with a letter/underscore and contain only letters, numbers, _ or -."
+    );
+  }
+
+  return tag;
+}
+
+function buildStructTag(
+  jsonKey: string,
+  withOmitempty: boolean | undefined,
+  customTag?: string
+) {
+  const tagValue = jsonKey + (withOmitempty ? ",omitempty" : "");
+  let tag = 'json:"' + tagValue + '"';
+
+  if (customTag) {
+    tag += " " + customTag + ':"' + tagValue + '"';
+  }
+
+  return "`" + tag + "`";
 }
 
 function format(str: string) {
