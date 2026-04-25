@@ -11,19 +11,22 @@ interface Settings {
   inline: boolean;
   customTag: string;
   omitempty: boolean;
+  usePointers: boolean;
 }
 
 const defaultSettings: Settings = {
   inline: true,
   customTag: "",
-  omitempty: true
+  omitempty: true,
+  usePointers: false
 };
 
 function normalizeSettings(value: Partial<Settings>): Settings {
   return {
     inline: value.inline !== false,
     customTag: typeof value.customTag === "string" ? value.customTag : "",
-    omitempty: value.omitempty !== false
+    omitempty: value.omitempty !== false,
+    usePointers: value.usePointers === true
   };
 }
 
@@ -42,6 +45,11 @@ const formFields = [
     type: InputType.SWITCH,
     key: "omitempty",
     label: "Use omitempty (all fields)"
+  },
+  {
+    type: InputType.SWITCH,
+    key: "usePointers",
+    label: "Use pointers"
   }
 ];
 
@@ -56,7 +64,8 @@ export default function JsonToGo() {
         jsonToGo(value, undefined, {
           inline: settings.inline,
           customTag: settings.customTag,
-          omitempty: settings.omitempty
+          omitempty: settings.omitempty,
+          usePointers: settings.usePointers
         }).go
       );
     },
